@@ -1,0 +1,9 @@
+{
+  "name": "@editchain/shared-types",
+  "version": "1.0.0",
+  "private": true,
+  "exports": {
+    ".": "./design.ts"
+  },
+  "types": "./design.ts"
+}
