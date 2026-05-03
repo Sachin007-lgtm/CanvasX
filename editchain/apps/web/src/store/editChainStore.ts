@@ -28,8 +28,10 @@ interface EditChainState {
   getChainSummary: () => {
     totalEdits: number;
     merkleRoot: string | null;
+    ipfsCid: string | null;
     lastEdit: number | null;
   };
+  finalize: () => Promise<{ merkleRoot: string; ipfsCid: string }>;
 }
 
 let seqCounter = 0;
@@ -136,21 +138,32 @@ export const useEditChainStore = create<EditChainState>()((set, get) => {
 
     syncToBackend: async () => {
       const { chain, pendingEvents, isSyncing } = get();
-      if (!chain || pendingEvents.length === 0 || isSyncing) return;
+      
+      // If no chain or no events to sync, just return
+      if (!chain || pendingEvents.length === 0) return;
+      // If already syncing, wait for it to finish (or skip if called via auto-sync)
+      if (isSyncing) return;
 
       set({ isSyncing: true, error: null });
 
       try {
-        const res = await fetch(`${API_BASE}/api/provenance/event`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            designId: chain.designId,
-            events: pendingEvents,
-          }),
-        });
+        // In this simple Phase 1 demo, we sync the events one by one or just the batch.
+        // The backend currently expects a single event per POST /api/provenance/event.
+        for (const event of pendingEvents) {
+          const res = await fetch(`${API_BASE}/api/provenance/event`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              designId: chain.designId,
+              elementId: event.elementId,
+              action: event.action,
+              before: event.before,
+              after: event.after,
+            }),
+          });
 
-        if (!res.ok) throw new Error(`Sync failed: ${res.status}`);
+          if (!res.ok) throw new Error(`Sync failed for event ${event.seq}: ${res.status}`);
+        }
 
         set({
           pendingEvents: [],
@@ -162,6 +175,56 @@ export const useEditChainStore = create<EditChainState>()((set, get) => {
           isSyncing: false,
           error: err instanceof Error ? err.message : "Sync failed",
         });
+        throw err; // Re-throw so finalize can catch it
+      }
+    },
+
+    finalize: async () => {
+      const { chain, isSyncing } = get();
+      
+      if (!chain) {
+        const msg = "No design found. Please generate a design first!";
+        set({ error: msg });
+        throw new Error(msg);
+      }
+
+      // If a background sync is happening, wait a moment or notify
+      if (isSyncing) {
+        const msg = "Syncing edits to backend... please wait a second.";
+        set({ error: msg });
+        throw new Error(msg);
+      }
+
+      try {
+        // 1. Force sync any pending events first
+        await get().syncToBackend();
+
+        set({ isSyncing: true, error: null });
+
+        const res = await fetch(`${API_BASE}/api/provenance/${chain.designId}/finalize`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+
+        if (!res.ok) throw new Error(`Finalization failed: ${res.status}`);
+
+        const data = await res.json();
+        
+        set((state) => {
+          if (state.chain) {
+            state.chain.merkleRoot = data.merkleRoot;
+            state.chain.ipfsCid = data.ipfsCid;
+          }
+          return { isSyncing: false };
+        });
+
+        return { merkleRoot: data.merkleRoot, ipfsCid: data.ipfsCid };
+      } catch (err) {
+        set({
+          isSyncing: false,
+          error: err instanceof Error ? err.message : "Finalization failed",
+        });
+        throw err;
       }
     },
 
@@ -170,6 +233,7 @@ export const useEditChainStore = create<EditChainState>()((set, get) => {
       return {
         totalEdits: chain?.events.length ?? 0,
         merkleRoot: chain?.merkleRoot ?? null,
+        ipfsCid: chain?.ipfsCid ?? null,
         lastEdit: chain?.updatedAt ?? null,
       };
     },

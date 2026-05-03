@@ -7,11 +7,12 @@ import type { SVGElement } from "@editchain/shared-types";
 import { useDesignStore } from "../store/designStore";
 
 export function PropertiesPanel() {
-  const selectedId  = useDesignStore((s) => s.selectedElementId);
-  const elements    = useDesignStore((s) => s.design?.schema.elements ?? []);
-  const updateText  = useDesignStore((s) => s.updateElementText);
-  const updateColor = useDesignStore((s) => s.updateElementColor);
-  const updateStyle = useDesignStore((s) => s.updateElementStyle);
+  const selectedId   = useDesignStore((s) => s.selectedElementId);
+  const elements     = useDesignStore((s) => s.design?.schema.elements ?? []);
+  const updateText   = useDesignStore((s) => s.updateElementText);
+  const updateColor  = useDesignStore((s) => s.updateElementColor);
+  const updateStyle  = useDesignStore((s) => s.updateElementStyle);
+  const updateBounds = useDesignStore((s) => s.updateElementBounds);
 
   const el: SVGElement | undefined = elements.find((e) => e.id === selectedId);
 
@@ -34,7 +35,8 @@ export function PropertiesPanel() {
   }
 
   const isText = el.type === "text";
-  const hasColor = ["rect", "circle", "path"].includes(el.type);
+  const hasColor = el.editable; // all editable elements can have colors changed
+
 
   return (
     <aside className="props-panel">
@@ -82,7 +84,7 @@ export function PropertiesPanel() {
           </div>
         )}
 
-        {/* Typography */}
+        {/* Typography + fill color for text */}
         {isText && (
           <div className="props-section">
             <div className="props-section-title">Typography</div>
@@ -116,9 +118,9 @@ export function PropertiesPanel() {
               </div>
             </div>
             <div className="props-row">
-              <label className="props-label">Fill color</label>
+              <label className="props-label">Text color</label>
               <div className="color-row">
-                <button className="color-swatch" title="Pick fill color">
+                <button className="color-swatch" title="Pick text color">
                   <input
                     type="color"
                     value={toHex(el.style.fill)}
@@ -134,6 +136,7 @@ export function PropertiesPanel() {
             </div>
           </div>
         )}
+
 
         {/* Shape color */}
         {hasColor && (
@@ -208,19 +211,41 @@ export function PropertiesPanel() {
           <div className="props-number-row">
             <div className="props-row">
               <label className="props-label">X</label>
-              <input className="props-input" value={Math.round(el.bounds.x)} readOnly />
+              <input
+                className="props-input"
+                type="number"
+                value={Math.round(el.bounds.x)}
+                onChange={(e) => updateBounds(el.id, { x: Number(e.target.value) })}
+              />
             </div>
             <div className="props-row">
               <label className="props-label">Y</label>
-              <input className="props-input" value={Math.round(el.bounds.y)} readOnly />
+              <input
+                className="props-input"
+                type="number"
+                value={Math.round(el.bounds.y)}
+                onChange={(e) => updateBounds(el.id, { y: Number(e.target.value) })}
+              />
             </div>
             <div className="props-row">
               <label className="props-label">W</label>
-              <input className="props-input" value={Math.round(el.bounds.width)} readOnly />
+              <input
+                className="props-input"
+                type="number"
+                min={1}
+                value={Math.round(el.bounds.width)}
+                onChange={(e) => updateBounds(el.id, { width: Number(e.target.value) })}
+              />
             </div>
             <div className="props-row">
               <label className="props-label">H</label>
-              <input className="props-input" value={Math.round(el.bounds.height)} readOnly />
+              <input
+                className="props-input"
+                type="number"
+                min={1}
+                value={Math.round(el.bounds.height)}
+                onChange={(e) => updateBounds(el.id, { height: Number(e.target.value) })}
+              />
             </div>
           </div>
         </div>

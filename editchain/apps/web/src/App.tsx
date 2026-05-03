@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { LayerPanel } from "./components/LayerPanel";
 import { SvgCanvas } from "./components/SvgCanvas";
 import { PropertiesPanel } from "./components/PropertiesPanel";
+import { ProvenancePanel } from "./components/ProvenancePanel";
 import { useGenerate } from "./generate/useGenerate";
 import { useDesignStore } from "./store/designStore";
 import { useEditChainStore } from "./store/editChainStore";
@@ -94,10 +95,23 @@ export default function App() {
 
           {/* Chain status badge */}
           {design && (
-            <div className="chain-status" title="Edit provenance chain status">
-              <div className={`chain-dot${chainSummary.totalEdits > 0 ? " active" : ""}`} />
-              {chainSummary.totalEdits} edit{chainSummary.totalEdits !== 1 ? "s" : ""}
-            </div>
+            <>
+              <div className="chain-status" title="Edit provenance chain status">
+                <div className={`chain-dot${chainSummary.totalEdits > 0 ? " active" : ""}`} />
+                {chainSummary.totalEdits} edit{chainSummary.totalEdits !== 1 ? "s" : ""}
+              </div>
+
+              {chainSummary.ipfsCid ? (
+                <div className="chain-status" style={{ color: "#6ee7b7" }}>
+                  ✅ Pinned to IPFS
+                </div>
+              ) : (
+                <div className="chain-status" title="Edit provenance chain status">
+                  <div className={`chain-dot${chainSummary.totalEdits > 0 ? " active" : ""}`} />
+                  {chainSummary.totalEdits} edit{chainSummary.totalEdits !== 1 ? "s" : ""}
+                </div>
+              )}
+            </>
           )}
         </div>
       </header>
@@ -106,6 +120,9 @@ export default function App() {
       <LayerPanel />
       <SvgCanvas />
       <PropertiesPanel />
+
+      {/* ── Phase 4: Provenance Timeline + Mint ─────── */}
+      <ProvenancePanel />
 
       {/* ── Error toast ─────────────────────────────── */}
       {visibleError && (

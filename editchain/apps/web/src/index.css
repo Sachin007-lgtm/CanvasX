@@ -65,6 +65,10 @@ html, body, #root {
   overflow: hidden;
 }
 
+/* Panel height for provenance bar */
+:root { --provenance-bar-h: 100px; }
+
+
 /* ── Top bar ─────────────────────────────────────────────── */
 .topbar {
   grid-area: topbar;
@@ -177,6 +181,25 @@ html, body, #root {
 }
 .btn-ghost:disabled { opacity: 0.4; cursor: not-allowed; }
 
+.btn-secondary {
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+.btn-secondary:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--accent);
+}
+
+.btn-success {
+  background: rgba(34,197,94,.15);
+  color: var(--success);
+  border: 1px solid var(--success);
+}
+.btn-success:hover { background: rgba(34,197,94,.25); }
+
+
 .topbar-actions {
   display: flex;
   gap: 6px;
@@ -286,7 +309,8 @@ html, body, #root {
   justify-content: center;
   background: var(--bg-base);
   overflow: auto;
-  padding: 32px;
+  padding: 32px 32px calc(32px + var(--provenance-bar-h)) 32px;
+
   position: relative;
 }
 

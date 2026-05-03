@@ -25,7 +25,6 @@ export function SvgCanvas() {
     if (!svg) return;
 
     for (const el of elements) {
-      // querySelector needs to escape IDs that start with numbers or contain special chars
       let node: Element | null = null;
       try {
         node = svg.querySelector(`[id="${el.id}"]`);
@@ -35,18 +34,35 @@ export function SvgCanvas() {
       if (!node) continue;
 
       const s = el.style;
+      const b = el.bounds;
 
       // Fill & stroke
-      if (s.fill  !== undefined) node.setAttribute("fill",   s.fill);
-      if (s.stroke !== undefined) node.setAttribute("stroke", s.stroke);
-      if (s.strokeWidth !== undefined)
-        node.setAttribute("stroke-width", String(s.strokeWidth));
+      if (s.fill       !== undefined) node.setAttribute("fill",         s.fill);
+      if (s.stroke     !== undefined) node.setAttribute("stroke",       s.stroke);
+      if (s.strokeWidth !== undefined) node.setAttribute("stroke-width", String(s.strokeWidth));
+      if (s.opacity    !== undefined) node.setAttribute("opacity",      String(s.opacity));
 
-      // Opacity
-      if (s.opacity !== undefined)
-        node.setAttribute("opacity", String(s.opacity));
+      // ── Bounds / position ────────────────────────────────────
+      const tag = node.tagName.toLowerCase();
+      if (b) {
+        if (tag === "text" || tag === "rect" || tag === "image" || tag === "foreignobject") {
+          node.setAttribute("x",      String(b.x));
+          node.setAttribute("y",      String(b.y));
+          if (tag === "rect" || tag === "image") {
+            node.setAttribute("width",  String(b.width));
+            node.setAttribute("height", String(b.height));
+          }
+        } else if (tag === "circle" || tag === "ellipse") {
+          node.setAttribute("cx", String(b.x + b.width / 2));
+          node.setAttribute("cy", String(b.y + b.height / 2));
+          node.setAttribute("r",  String(Math.min(b.width, b.height) / 2));
+        } else if (tag === "g") {
+          // For groups, use a transform translate
+          node.setAttribute("transform", `translate(${b.x}, ${b.y})`);
+        }
+      }
 
-      // Typography (only meaningful on <text> nodes)
+      // ── Typography (text nodes only) ─────────────────────────
       if (el.type === "text") {
         if (s.fontSize   !== undefined) node.setAttribute("font-size",   String(s.fontSize));
         if (s.fontFamily !== undefined) node.setAttribute("font-family", s.fontFamily);
@@ -64,7 +80,7 @@ export function SvgCanvas() {
         }
       }
     }
-  }, [elements]); // re-runs every time any element property changes
+  }, [elements]);
 
   // ── Click-to-select ───────────────────────────────────────
   const handleSvgClick = useCallback(

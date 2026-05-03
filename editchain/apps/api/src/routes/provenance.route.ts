@@ -8,11 +8,12 @@
 
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
+import { designService } from "../services/design.service";
+import { pinToIPFS } from "../services/ipfs.service";
 import {
   appendEditEvent,
   computeMerkleRoot,
   verifyChainIntegrity,
-  getMerkleProof,
   verifyMerkleProof,
 } from "../services/editChain.service";
 import type { EditChain } from "@editchain/shared-types";
@@ -47,31 +48,22 @@ provenanceRouter.post("/event", async (req: Request, res: Response) => {
   const { designId, elementId, action, before, after } = parsed.data;
 
   try {
-    // TODO: load chain from DB
-    // const design = await designService.findById(designId);
-    // const chain = design.chain;
-
-    // For demonstration — in-memory chain
-    const chain: EditChain = {
-      designId,
-      creatorAddress: "0x0000000000000000000000000000000000000000",
-      events: [],
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
+    const design = await designService.findById(designId);
+    if (!design) return res.status(404).json({ error: "Design not found" });
+    
+    const chain = design.chain;
 
     const newEvent = appendEditEvent(chain, {
       elementId,
       action,
-      before,
-      after,
+      before: before as any,
+      after: after as any,
     });
 
     chain.events.push(newEvent);
     chain.updatedAt = Date.now();
 
-    // TODO: persist updated chain
-    // await designService.updateChain(designId, chain);
+    await designService.save(design);
 
     return res.status(201).json({
       event: newEvent,
@@ -86,50 +78,50 @@ provenanceRouter.post("/event", async (req: Request, res: Response) => {
 // Get full chain for a design
 provenanceRouter.get("/:designId/chain", async (req: Request, res: Response) => {
   const { designId } = req.params;
+  const design = await designService.findById(designId);
+  if (!design) return res.status(404).json({ error: "Design not found" });
 
-  // TODO: load from DB
-  return res.status(501).json({
-    message: "Connect DB — chain endpoint ready",
-    designId,
-  });
+  return res.json(design.chain);
 });
 
-// Verify chain integrity — useful for the research paper demo
+// Verify chain integrity
 provenanceRouter.get("/:designId/verify", async (req: Request, res: Response) => {
   const { designId } = req.params;
+  const design = await designService.findById(designId);
+  if (!design) return res.status(404).json({ error: "Design not found" });
 
-  // TODO: load chain from DB
-  // const design = await designService.findById(designId);
-  // const report = verifyChainIntegrity(design.chain);
-
-  // Demonstration with empty chain
-  const demoChain: EditChain = {
-    designId,
-    creatorAddress: "0x0000000000000000000000000000000000000000",
-    events: [],
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-  };
-
-  const report = verifyChainIntegrity(demoChain);
-
+  const report = verifyChainIntegrity(design.chain);
   return res.json(report);
 });
 
-// Finalize — compute Merkle root before minting
+// Finalize — compute Merkle root and pin to IPFS before minting
 provenanceRouter.post("/:designId/finalize", async (req: Request, res: Response) => {
   const { designId } = req.params;
+  
+  try {
+    const design = await designService.findById(designId);
+    if (!design) return res.status(404).json({ error: "Design not found" });
 
-  // TODO: load chain from DB
-  // const design = await designService.findById(designId);
-  // const merkleRoot = computeMerkleRoot(design.chain);
-  // design.chain.merkleRoot = merkleRoot;
-  // await designService.save(design);
+    // 1. Compute final Merkle root
+    const merkleRoot = computeMerkleRoot(design.chain);
+    design.chain.merkleRoot = merkleRoot;
 
-  return res.status(501).json({
-    message: "Connect DB to finalize and compute Merkle root",
-    designId,
-  });
+    // 2. Pin the full design + chain to IPFS
+    const ipfsCid = await pinToIPFS(design, `EditChain-${designId}`);
+    design.chain.ipfsCid = ipfsCid;
+    
+    await designService.save(design);
+
+    return res.json({
+      message: "Merkle root computed and history pinned to IPFS",
+      merkleRoot,
+      ipfsCid,
+      gatewayUrl: `https://gateway.pinata.cloud/ipfs/${ipfsCid}`
+    });
+  } catch (err) {
+    console.error("Finalization error:", err);
+    return res.status(500).json({ error: "Failed to finalize and pin to IPFS" });
+  }
 });
 
 // Verify a single event via Merkle proof (no need to download full chain)

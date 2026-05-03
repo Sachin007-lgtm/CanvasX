@@ -6,11 +6,9 @@
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { v4 as uuid } from "uuid";
+import { designService } from "../services/design.service";
 import { generateDesign } from "../services/svgGenerator.service";
-import {
-  createGenesisHash,
-  computeMerkleRoot,
-} from "../services/editChain.service";
+import { computeMerkleRoot } from "../services/editChain.service";
 import type { Design, EditChain } from "@editchain/shared-types";
 
 export const generateRouter = Router();
@@ -67,12 +65,12 @@ generateRouter.post("/", async (req: Request, res: Response) => {
       updatedAt: now,
     };
 
-    // TODO: persist to database
-    // await designService.save(design);
+    // Persist to local JSON
+    await designService.save(design);
 
     return res.status(201).json({
       design,
-      tokensUsed: 0, // TODO: extract from API response
+      tokensUsed: 0,
     });
   } catch (err) {
     console.error("Generation error:", err);
