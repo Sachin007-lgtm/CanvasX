@@ -15,6 +15,7 @@ import {
   computeMerkleRoot,
   verifyChainIntegrity,
   verifyMerkleProof,
+  getMerkleProof,
 } from "../services/editChain.service";
 import type { EditChain } from "@editchain/shared-types";
 
@@ -134,4 +135,40 @@ provenanceRouter.post("/verify-event", (req: Request, res: Response) => {
 
   const valid = verifyMerkleProof(eventHash, proof, index, merkleRoot);
   return res.json({ valid, eventHash, merkleRoot });
+});
+
+// Get Merkle proof for a specific event sequence — called by the UI verifier
+// GET /api/provenance/:designId/proof/seq/:seq
+provenanceRouter.get("/:designId/proof/seq/:seq", async (req: Request, res: Response) => {
+  const { designId, seq } = req.params;
+
+  try {
+    const design = await designService.findById(designId);
+    if (!design) return res.status(404).json({ error: "Design not found" });
+
+    if (!design.chain.merkleRoot) {
+      return res.status(400).json({ error: "Chain not finalized yet — compute Merkle root first" });
+    }
+
+    // Find the event by seq to get the authoritative server hash
+    const serverEvent = design.chain.events.find(e => e.seq === Number(seq));
+    if (!serverEvent || !serverEvent.hash) {
+      return res.status(404).json({ error: "Event seq not found in chain" });
+    }
+
+    const result = getMerkleProof(design.chain, serverEvent.hash);
+    if (!result) {
+      return res.status(404).json({ error: "Event hash not found in chain tree" });
+    }
+
+    return res.json({
+      eventHash:  serverEvent.hash, // Return the true server hash so the client can verify it
+      proof:      result.proof,
+      index:      result.index,
+      merkleRoot: design.chain.merkleRoot,
+    });
+  } catch (err) {
+    console.error("Proof generation error:", err);
+    return res.status(500).json({ error: "Failed to generate proof" });
+  }
 });
