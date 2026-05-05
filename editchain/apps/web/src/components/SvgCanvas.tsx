@@ -109,8 +109,8 @@ export function SvgCanvas() {
           <h2>Your canvas is empty</h2>
           <p>
             Type a prompt in the bar above and hit{" "}
-            <strong style={{ color: "var(--accent)" }}>Generate</strong> to
-            create your first AI-designed graphic.
+            <strong style={{ color: "var(--accent)" }}>Generate</strong>, or
+            click <strong style={{ color: "var(--accent)" }}>+ Blank canvas</strong> to start from scratch.
           </p>
         </div>
       </main>

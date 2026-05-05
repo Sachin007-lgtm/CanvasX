@@ -19,8 +19,10 @@ const ROLE_ICONS: Record<string, string> = {
 
 export function LayerPanel() {
   const elements = useDesignStore((s) => s.design?.schema.elements ?? []);
+  const hasDesign = useDesignStore((s) => !!s.design);
   const selected = useDesignStore((s) => s.selectedElementId);
   const selectElement = useDesignStore((s) => s.selectElement);
+  const addElement = useDesignStore((s) => s.addElement);
 
   return (
     <aside className="layer-panel">
@@ -28,11 +30,16 @@ export function LayerPanel() {
         <span className="panel-title">Layers</span>
         <span style={{ fontSize: 11, color: "var(--text-muted)" }}>{elements.length}</span>
       </div>
+      <div className="layer-actions">
+        <button type="button" className="btn btn-ghost" onClick={() => addElement("text")} disabled={!hasDesign}>+ Text</button>
+        <button type="button" className="btn btn-ghost" onClick={() => addElement("rect")} disabled={!hasDesign}>+ Rect</button>
+        <button type="button" className="btn btn-ghost" onClick={() => addElement("circle")} disabled={!hasDesign}>+ Circle</button>
+      </div>
       <div className="layer-list">
         {elements.length === 0 ? (
           <div className="empty-state">
             <div className="empty-icon">⬡</div>
-            <p>Generate a design to see layers here</p>
+            <p>Start with a blank canvas or generate a design to see layers here</p>
           </div>
         ) : (
           // Reverse so top elements appear first

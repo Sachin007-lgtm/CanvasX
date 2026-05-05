@@ -4,7 +4,7 @@
 // ============================================================
 
 import { useState } from "react";
-import type { GenerateRequest, GenerateResponse } from "@editchain/shared-types";
+import type { Design, GenerateRequest, GenerateResponse } from "@editchain/shared-types";
 import { useDesignStore } from "../store/designStore";
 import { useEditChainStore } from "../store/editChainStore";
 
@@ -16,12 +16,38 @@ interface UseGenerateReturn {
   error: string | null;
 }
 
-export function useGenerate(): UseGenerateReturn {
+export function useGenerate(): UseGenerateReturn & { createBlank: (width?: number, height?: number) => Promise<void> } {
   const [error, setError] = useState<string | null>(null);
   const setDesign = useDesignStore((s) => s.setDesign);
   const setGenerating = useDesignStore((s) => s.setGenerating);
   const isGenerating = useDesignStore((s) => s.isGenerating);
   const initChain = useEditChainStore((s) => s.initChain);
+
+  const createBlank = async (width = 800, height = 600) => {
+    setGenerating(true);
+    setError(null);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/designs`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ width, height }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error ?? `Create blank design failed (${res.status})`);
+      }
+
+      const data: { design: Design } = await res.json();
+      setDesign(data.design);
+      initChain(data.design.id, data.design.chain.creatorAddress);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unknown error");
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   const generate = async (req: GenerateRequest) => {
     setGenerating(true);
@@ -67,5 +93,5 @@ export function useGenerate(): UseGenerateReturn {
     }
   };
 
-  return { generate, isGenerating, error };
+  return { generate, createBlank, isGenerating, error };
 }

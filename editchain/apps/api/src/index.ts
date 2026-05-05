@@ -8,6 +8,7 @@ import helmet from "helmet";
 import { generateRouter } from "./routes/generate.route";
 import { provenanceRouter } from "./routes/provenance.route";
 import { mintRouter } from "./routes/mint.route";
+import { designRouter } from "./routes/design.route";
 
 const app = express();
 const PORT = process.env.PORT ?? 3001;
@@ -30,6 +31,7 @@ app.get("/health", (_req, res) => {
 
 // Routes
 app.use("/api/generate", generateRouter);
+app.use("/api/designs", designRouter);
 app.use("/api/provenance", provenanceRouter);
 app.use("/api/mint", mintRouter);
 

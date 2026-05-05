@@ -17,7 +17,7 @@ const STYLES = ["minimal", "bold", "editorial", "playful"] as const;
 export default function App() {
   const [prompt, setPrompt] = useState("");
   const [style, setStyle] = useState<GenerateRequest["style"]>("minimal");
-  const { generate, isGenerating, error } = useGenerate();
+  const { generate, createBlank, isGenerating, error } = useGenerate();
   const [visibleError, setVisibleError] = useState<string | null>(null);
 
   // Show error and auto-dismiss after 10s
@@ -78,6 +78,15 @@ export default function App() {
             disabled={isGenerating || !prompt.trim()}
           >
             {isGenerating ? "Generating…" : "✦ Generate"}
+          </button>
+          <button
+            id="blank-btn"
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => createBlank(800, 600)}
+            disabled={isGenerating}
+          >
+            + Blank canvas
           </button>
         </form>
 

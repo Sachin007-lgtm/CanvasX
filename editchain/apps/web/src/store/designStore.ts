@@ -41,6 +41,7 @@ interface DesignState {
     elementId: string,
     style: Partial<SVGElement["style"]>
   ) => void;
+  addElement: (type: "text" | "rect" | "circle") => void;
 
   // Undo last action
   undo: () => void;
@@ -183,6 +184,81 @@ export const useDesignStore = create<DesignState>()(
       emitEdit(elementId, action, before, after);
     },
 
+    addElement: (type) => {
+      const design = get().design;
+      if (!design) return;
+
+      const width = design.schema.viewBox.width;
+      const height = design.schema.viewBox.height;
+      const id = `${type}-${Date.now()}`;
+      let element: SVGElement;
+
+      if (type === "text") {
+        element = {
+          id,
+          type: "text",
+          role: "body-text",
+          editable: true,
+          label: "New text",
+          content: "New text",
+          style: {
+            fill: "#111111",
+            stroke: "none",
+            strokeWidth: 0,
+            fontSize: 32,
+            fontFamily: "Inter, sans-serif",
+            fontWeight: "700",
+            opacity: 1,
+          },
+          bounds: { x: 100, y: 140, width: 240, height: 40 },
+        };
+      } else if (type === "rect") {
+        element = {
+          id,
+          type: "rect",
+          role: "shape",
+          editable: true,
+          label: "Rectangle",
+          content: "#60a5fa",
+          style: {
+            fill: "#60a5fa",
+            stroke: "#1e3a8a",
+            strokeWidth: 2,
+            opacity: 1,
+          },
+          bounds: { x: 120, y: 180, width: 240, height: 140 },
+        };
+      } else {
+        element = {
+          id,
+          type: "circle",
+          role: "shape",
+          editable: true,
+          label: "Circle",
+          content: "#fca5a5",
+          style: {
+            fill: "#fca5a5",
+            stroke: "#b91c1c",
+            strokeWidth: 2,
+            opacity: 1,
+          },
+          bounds: { x: 280, y: 240, width: 120, height: 120 },
+        };
+      }
+
+      set((state) => {
+        if (!state.design) return;
+        state.design.schema.elements.push(element);
+        state.design.schema.svg = buildSvgFromElements(
+          state.design.schema.elements,
+          state.design.schema.viewBox.width,
+          state.design.schema.viewBox.height
+        );
+      });
+
+      emitEdit(id, "add-element", {}, element);
+    },
+
     undo: () => {
       const last = get().undoStack[get().undoStack.length - 1];
       if (!last) return;
@@ -209,3 +285,53 @@ export const useDesignStore = create<DesignState>()(
       }),
   }))
 );
+
+function buildSvgFromElements(elements: SVGElement[], width: number, height: number) {
+  const children = elements.map((el) => {
+    const attrs: string[] = [];
+    const s = el.style;
+
+    if (s.fill !== undefined) attrs.push(`fill="${s.fill}"`);
+    if (s.stroke !== undefined) attrs.push(`stroke="${s.stroke}"`);
+    if (s.strokeWidth !== undefined) attrs.push(`stroke-width="${s.strokeWidth}"`);
+    if (s.opacity !== undefined) attrs.push(`opacity="${s.opacity}"`);
+
+    if (el.type === "text") {
+      attrs.push(`x="${el.bounds.x}"`, `y="${el.bounds.y}"`);
+      if (s.fontSize !== undefined) attrs.push(`font-size="${s.fontSize}"`);
+      if (s.fontFamily) attrs.push(`font-family="${s.fontFamily}"`);
+      if (s.fontWeight) attrs.push(`font-weight="${s.fontWeight}"`);
+      const content = escapeSvgText(el.content ?? "");
+      return `<text id="${el.id}" ${attrs.join(" ")}>${content}</text>`;
+    }
+
+    if (el.type === "rect") {
+      attrs.push(
+        `x="${el.bounds.x}"`,
+        `y="${el.bounds.y}"`,
+        `width="${el.bounds.width}"`,
+        `height="${el.bounds.height}"`
+      );
+      return `<rect id="${el.id}" ${attrs.join(" ")} />`;
+    }
+
+    if (el.type === "circle") {
+      const cx = el.bounds.x + el.bounds.width / 2;
+      const cy = el.bounds.y + el.bounds.height / 2;
+      const r = Math.min(el.bounds.width, el.bounds.height) / 2;
+      attrs.push(`cx="${cx}"`, `cy="${cy}"`, `r="${r}"`);
+      return `<circle id="${el.id}" ${attrs.join(" ")} />`;
+    }
+
+    return "";
+  });
+
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">${children.join("\n")}</svg>`;
+}
+
+function escapeSvgText(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}

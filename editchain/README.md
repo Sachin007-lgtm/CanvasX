@@ -12,7 +12,7 @@ EditChain is a **human-in-the-loop AI design tool**. You describe a graphic in p
 
 ### Key Features
 
-- **AI-powered generation** — Gemini 2.0 Flash generates professional SVG designs from a text prompt with multiple style presets
+- **AI-powered generation** — Gemini Flash generates professional SVG designs from a text prompt with multiple style presets
 - **Editable canvas** — Click any element in the generated design to select it and edit its properties in real time
 - **Layer panel** — See all AI-annotated elements listed by type and role (headline, shape, background, etc.)
 - **Properties panel** — Edit text, fill/stroke color, font size, font weight, and opacity per element
@@ -79,36 +79,22 @@ NODE_ENV=development
 VITE_API_URL=http://localhost:3001
 ```
 
-### 3. Run the API server
+### 3. Run the project
+
+This project uses Turborepo, allowing you to start both the API and the web frontend with a single command from the root `editchain` directory.
 
 Open a terminal:
 
 ```powershell
-cd C:\Users\Shreya\CODING\PRJ-III\editchain\apps\api
-pnpm run start
-```
-
-Expected output:
-```
-EditChain API running on http://localhost:3001
-```
-
-### 4. Run the frontend
-
-Open a **second terminal**:
-
-```powershell
-cd C:\Users\Shreya\CODING\PRJ-III\editchain\apps\web
+cd C:\Users\Shreya\CODING\PRJ-III\editchain
 pnpm run dev
 ```
 
-Expected output:
-```
-VITE v5.x.x  ready in Xms
-➜  Local:   http://localhost:5173/
-```
+This will concurrently start:
+- **API Server** on http://localhost:3001
+- **Vite Web App** on http://localhost:5173
 
-### 5. Open the app
+### 4. Open the app
 
 Navigate to **http://localhost:5173** in your browser.
 
@@ -185,7 +171,7 @@ taskkill /PID <PID> /F
 
 | Layer | Technology |
 |-------|-----------|
-| AI | Gemini 1.5 Flash (`@google/generative-ai`) |
+| AI | Gemini Flash (`@google/generative-ai`) |
 | API | Express 5, TypeScript, tsx |
 | Frontend | React 18, Vite, Zustand, Immer |
 | Monorepo | pnpm workspaces, Turborepo |
