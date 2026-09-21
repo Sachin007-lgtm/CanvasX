@@ -14,14 +14,53 @@ const app = express();
 const PORT = process.env.PORT ?? 3001;
 
 // Middleware
-app.use(helmet());
+const configuredOrigins = (process.env.FRONTEND_URL ?? "")
+  .split(",")
+  .map((url) => url.trim().replace(/\/$/, ""))
+  .filter(Boolean);
+
 const allowedOrigins = [
-  process.env.FRONTEND_URL ?? "http://localhost:5173",
+  ...configuredOrigins,
+  "https://canvas-x-av2x.vercel.app",
   "http://localhost:5173",
   "http://localhost:5174",
+  "http://localhost:3000",
 ];
-console.log("CORS Origins configured:", allowedOrigins);
-app.use(cors({ origin: allowedOrigins }));
+
+console.log("CORS Base Origins configured:", allowedOrigins);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (curl, mobile, server-to-server, health checks)
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      const normalizedOrigin = origin.replace(/\/$/, "");
+
+      if (
+        allowedOrigins.includes(normalizedOrigin) ||
+        /^https:\/\/([a-zA-Z0-9-]+\.)*vercel\.app$/.test(normalizedOrigin) ||
+        /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(normalizedOrigin)
+      ) {
+        return callback(null, true);
+      }
+
+      console.warn(`[CORS] Blocked request from origin: ${origin}`);
+      return callback(null, false);
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  })
+);
+
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  })
+);
 app.use(express.json({ limit: "2mb" })); // SVG payloads can be large
 
 // Health check
