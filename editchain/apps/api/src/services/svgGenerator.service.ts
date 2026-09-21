@@ -82,7 +82,7 @@ function makeModel() {
   if (!apiKey) throw new Error("GEMINI_API_KEY is not set in environment variables.");
   const genAI = new GoogleGenerativeAI(apiKey);
   return genAI.getGenerativeModel({
-    model: "gemini-2.5-flash",
+    model: "gemini-flash-lite-latest",
     systemInstruction: SYSTEM_PROMPT,
     generationConfig: {
       responseMimeType: "application/json",
@@ -154,7 +154,7 @@ export async function aiEditElement(
 
   const genAI = new GoogleGenerativeAI(apiKey);
   const editModel = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash",
+    model: "gemini-flash-lite-latest",
     generationConfig: {
       responseMimeType: "application/json",
       temperature: 0.4,
